@@ -2217,4 +2217,125 @@ public class ModuleTenantsTest {
     }
   }
 
+  @Test
+  public void test651() {
+    final String okapiTenant = "roskilde";
+    RestAssured.port = port;
+    RestAssuredClient c;
+    Response r;
+
+    // add tenant
+    final String docTenantRoskilde = "{" + LS
+      + "  \"id\" : \"" + okapiTenant + "\"," + LS
+      + "  \"name\" : \"" + okapiTenant + "\"," + LS
+      + "  \"description\" : \"Roskilde bibliotek\"" + LS
+      + "}";
+    c = api.createRestAssured3();
+    r = c.given()
+      .header("Content-Type", "application/json")
+      .body(docTenantRoskilde).post("/_/proxy/tenants")
+      .then().statusCode(201)
+      .body(equalTo(docTenantRoskilde))
+      .extract().response();
+    Assert.assertTrue(
+      "raml: " + c.getLastReport().toString(),
+      c.getLastReport().isEmpty());
+    final String locationTenantRoskilde = r.getHeader("Location");
+
+    final int NO_MODULES = 3;
+    for (int i = 0; i < NO_MODULES; i++) {
+      final String docProv = "{" + LS
+        + "  \"id\" : \"prov" + i + "-1.0.0\"," + LS
+        + "  \"provides\" : [ {" + LS
+        + "    \"id\" : \"i1\"," + LS
+        + "    \"version\" : \"1.0\"," + LS
+        + "    \"handlers\" : [ {" + LS
+        + "      \"methods\" : [ \"GET\", \"POST\" ]," + LS
+        + "      \"pathPattern\" : \"/foo\"" + LS
+        + "    } ]" + LS
+        + "  } ]" + LS
+        + "}";
+      c = api.createRestAssured3();
+      c.given()
+        .header("Content-Type", "application/json")
+        .body(docProv)
+        .post("/_/proxy/modules")
+        .then().statusCode(201).log().ifValidationFails();
+      Assert.assertTrue(
+        "raml: " + c.getLastReport().toString(),
+        c.getLastReport().isEmpty());
+    }
+    final String docReq = "{" + LS
+      + "  \"id\" : \"req-1.0.0\"," + LS
+      + "  \"requires\" : [ {" + LS
+      + "    \"id\" : \"i1\"," + LS
+      + "    \"version\" : \"1.0\"" + LS
+      + "  } ]" + LS
+      + "}";
+    c = api.createRestAssured3();
+    c.given()
+      .header("Content-Type", "application/json")
+      .body(docReq)
+      .post("/_/proxy/modules")
+      .then().statusCode(201).log().ifValidationFails();
+    Assert.assertTrue(
+      "raml: " + c.getLastReport().toString(),
+      c.getLastReport().isEmpty());
+
+    for (int i = 0; i < NO_MODULES; i++) {
+      c = api.createRestAssured3();
+      c.given()
+        .header("Content-Type", "application/json")
+        .body("[ {\"id\" : \"req-1.0.0\", \"action\" : \"enable\"},"
+          + " {\"id\" : \"prov" + i + "-1.0.0\", \"action\" : \"enable\"} ]")
+        .post("/_/proxy/tenants/" + okapiTenant + "/install?simulate=true")
+        .then().statusCode(200)
+        .body(equalTo("[ {" + LS
+          + "  \"id\" : \"prov" + i + "-1.0.0\"," + LS
+          + "  \"action\" : \"enable\"" + LS
+          + "}, {" + LS
+          + "  \"id\" : \"req-1.0.0\"," + LS
+          + "  \"action\" : \"enable\"" + LS
+          + "} ]"));
+      Assert.assertTrue(
+        "raml: " + c.getLastReport().toString(),
+        c.getLastReport().isEmpty());
+
+      c = api.createRestAssured3();
+      c.given()
+        .header("Content-Type", "application/json")
+        .body("[ {\"id\" : \"prov" + i + "-1.0.0\", \"action\" : \"enable\"},"
+          + " {\"id\" : \"req-1.0.0\", \"action\" : \"enable\"} ]")
+        .post("/_/proxy/tenants/" + okapiTenant + "/install?simulate=true")
+        .then().statusCode(200)
+        .body(equalTo("[ {" + LS
+          + "  \"id\" : \"prov" + i + "-1.0.0\"," + LS
+          + "  \"action\" : \"enable\"" + LS
+          + "}, {" + LS
+          + "  \"id\" : \"req-1.0.0\"," + LS
+          + "  \"action\" : \"enable\"" + LS
+          + "} ]"));
+      Assert.assertTrue(
+        "raml: " + c.getLastReport().toString(),
+        c.getLastReport().isEmpty());
+    }
+    /* TODO check conflict
+    c = api.createRestAssured3();
+    c.given()
+      .header("Content-Type", "application/json")
+      .body("[ {\"id\" : \"req-1.0.0\", \"action\" : \"enable\"} ]")
+      .post("/_/proxy/tenants/" + okapiTenant + "/install?simulate=true")
+      .then().statusCode(200)
+      .body(equalTo("[ {" + LS
+        + "  \"id\" : \"prov0-1.0.0\"," + LS
+        + "  \"action\" : \"enable\"" + LS
+        + "}, {" + LS
+        + "  \"id\" : \"req-1.0.0\"," + LS
+        + "  \"action\" : \"enable\"" + LS
+        + "} ]"));
+    Assert.assertTrue(
+      "raml: " + c.getLastReport().toString(),
+      c.getLastReport().isEmpty());
+*/
+  }
 }

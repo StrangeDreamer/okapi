@@ -288,23 +288,33 @@ public class ModuleManager {
       return addModuleDependencies(foundMd, modsAvailable, modsEnabled, tml);
     }
     // see if we can find it in available modules
-    foundMd = checkInterfaceDepAvailable(modsAvailable, req);
+    foundMd = checkInterfaceDepAvailable(modsAvailable, req, tml);
     if (foundMd != null) {
       return addModuleDependencies(foundMd, modsAvailable, modsEnabled, tml);
     }
     return -1;
   }
 
-  private ModuleDescriptor checkInterfaceDepAvailable(Map<String, ModuleDescriptor> modsAvailable,
-    InterfaceDescriptor req) {
+  private ModuleDescriptor checkInterfaceDepAvailable(
+    Map<String, ModuleDescriptor> modsAvailable, InterfaceDescriptor req,
+    List<TenantModuleDescriptor> tml) {
 
     ModuleDescriptor foundMd = null;
     for (Map.Entry<String, ModuleDescriptor> entry : modsAvailable.entrySet()) {
       ModuleDescriptor md = entry.getValue();
       for (InterfaceDescriptor pi : md.getProvidesList()) {
-        if (pi.isRegularHandler() && pi.isCompatible(req)
-          && (foundMd == null || md.compareTo(foundMd) > 0)) {// newest module
-          foundMd = md;
+        if (pi.isRegularHandler() && pi.isCompatible(req)) {
+          if (foundMd == null) {
+            foundMd = md;
+          } else if (!md.getProduct().equals(foundMd.getProduct())) {
+            TenantModuleDescriptor tm = new TenantModuleDescriptor();
+            tm.setAction(Action.conflict);
+            tm.setId(md.getId());
+            tm.setMessage("Provides same interface as " + foundMd.getId());
+            tml.add(tm);
+          } else if (md.compareTo(foundMd) > 0) {
+            foundMd = md;
+          }
         }
       }
     }
