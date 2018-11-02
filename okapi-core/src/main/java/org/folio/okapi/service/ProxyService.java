@@ -671,6 +671,18 @@ public class ProxyService {
           cReq.headers().add(key, value);
         }
     }
+    if (mi.getRewritePath() != null) {
+      for (Map.Entry<String,String> entry : cReq.headers().entries()) {
+        String key = entry.getKey();
+        String value = entry.getValue();
+        if (value.contains("multipart/form-data")) {
+          logger.info("- {}: {}", key, value);
+          cReq.headers().remove(key);
+          logger.info("+ {}: {}", key, "application/json");
+          cReq.headers().add(key, "application/json");
+        }
+      }
+    }
     cReq.headers().remove("Content-Length");
     final String phase = mi.getRoutingEntry().getPhase();
     if (!XOkapiHeaders.FILTER_AUTH.equals(phase)) {
