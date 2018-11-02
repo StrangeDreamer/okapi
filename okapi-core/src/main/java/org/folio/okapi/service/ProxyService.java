@@ -89,6 +89,18 @@ public class ProxyService {
     httpClient = vertx.createHttpClient(opt);
   }
 
+  private void updateHeader(MultiMap headers, String k, String v) {
+    if (headers.contains(k)) {
+      if (v.equals(headers.get(k))) {
+        logger.warn("updateHeader k=" + k + "v=" + v);
+      } else {
+        logger.warn("updateHeader k=" + k + "v=" + v + " orgV=" + headers.get(k));
+        headers.add(k, v);
+      }
+    } else {
+      headers.set(k, v);
+    }
+  }
   /**
    * Make a trace header. Also writes a log entry for the response.
    *
@@ -536,7 +548,7 @@ public class ProxyService {
 
         pc.logRequest(ctx, tenantId);
 
-        ctx.request().headers().set(XOkapiHeaders.URL, okapiUrl);
+        updateHeader(ctx.request().headers(), XOkapiHeaders.URL, okapiUrl);
         ctx.request().headers().remove(XOkapiHeaders.MODULE_ID);
 
         resolveUrls(l.iterator(), res -> {
@@ -945,9 +957,9 @@ public class ProxyService {
           if (pc.getHandlerRes() > 0) {
             String hresult = String.valueOf(pc.getHandlerRes());
             logger.debug("proxyR: postHeader: Setting " + XOkapiHeaders.HANDLER_RESULT + " to '" + hresult + "'");
-            ctx.request().headers().set(XOkapiHeaders.HANDLER_RESULT, hresult);
+            updateHeader(ctx.request().headers(), XOkapiHeaders.HANDLER_RESULT, hresult);
           } else if (badAuth) {
-            ctx.request().headers().set(XOkapiHeaders.AUTH_RESULT, "" + pc.getAuthRes());
+            updateHeader(ctx.request().headers(), XOkapiHeaders.AUTH_RESULT, "" + pc.getAuthRes());
           } else {
             logger.warn("proxyR: postHeader: Oops, no result to pass to post handler");
           }
@@ -960,9 +972,9 @@ public class ProxyService {
   }
 
   private void passRequestInfo(RoutingContext ctx, ProxyContext pc) {
-    ctx.request().headers().set(XOkapiHeaders.REQUEST_IP, pc.getReqIp());
-    ctx.request().headers().set(XOkapiHeaders.REQUEST_TIMESTAMP, "" + pc.getReqTimestamp());
-    ctx.request().headers().set(XOkapiHeaders.REQUEST_METHOD, pc.getReqMethod());
+    updateHeader(ctx.request().headers(), XOkapiHeaders.REQUEST_IP, pc.getReqIp());
+    updateHeader(ctx.request().headers(), XOkapiHeaders.REQUEST_TIMESTAMP, "" + pc.getReqTimestamp());
+    updateHeader(ctx.request().headers(), XOkapiHeaders.REQUEST_METHOD, pc.getReqMethod());
   }
 
   private DeploymentDescriptor pickInstance(List<DeploymentDescriptor> instances) {
