@@ -33,7 +33,7 @@ Okapi listens on port 9130.
 
 Documentation
 -------------
-
+* [集群部署](doc/集群部署.md)
 * [Okapi Guide and Reference](doc/guide.md)
 * [Documentation index](doc/index.md)
 * [Contributing guidelines](CONTRIBUTING.md)
